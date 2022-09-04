@@ -9,8 +9,6 @@ import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
 import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
 import ru.demmax93.components.BulletComponent;
 import ru.demmax93.components.CharacterComponent;
-import ru.demmax93.components.PlayerComponent;
-import ru.demmax93.components.StatusComponent;
 
 public class BulletSystem extends EntitySystem implements EntityListener {
     public final btCollisionConfiguration collisionConfiguration;
@@ -20,29 +18,13 @@ public class BulletSystem extends EntitySystem implements EntityListener {
     public final btDiscreteDynamicsWorld collisionWorld;
     private final btGhostPairCallback ghostPairCallback;
 
-    public class MyContactListener extends ContactListener {
-        @Override
-        public void onContactStarted(btCollisionObject colObj0, btCollisionObject colObj1) {
-            if (colObj0.userData instanceof Entity) {
-                Entity entity0 = (Entity) colObj0.userData;
-                Entity entity1 = (Entity) colObj1.userData;
-                if (entity0.getComponent(CharacterComponent.class) != null && entity1.getComponent(CharacterComponent.class) != null) {
-                        if (entity1.getComponent(StatusComponent.class).alive)
-                            entity0.getComponent(PlayerComponent.class).health -= 10;
-                        entity1.getComponent(StatusComponent.class).alive = false;
-                }
-            }
-        }
-    }
-
     @Override
     public void addedToEngine(Engine engine) {
         engine.addEntityListener(Family.all(BulletComponent.class).get(), this);
+        engine.addEntityListener(Family.all(CharacterComponent.class).get(), this);
     }
 
     public BulletSystem() {
-        MyContactListener myContactListener = new MyContactListener();
-        myContactListener.enable();
         collisionConfiguration = new btDefaultCollisionConfiguration();
         dispatcher = new btCollisionDispatcher(collisionConfiguration);
         broadphase = new btAxisSweep3(new Vector3(-1000, -1000, -1000), new Vector3(1000, 1000, 1000));
@@ -51,6 +33,7 @@ public class BulletSystem extends EntitySystem implements EntityListener {
         ghostPairCallback = new btGhostPairCallback();
         broadphase.getOverlappingPairCache().setInternalGhostPairCallback(ghostPairCallback);
         this.collisionWorld.setGravity(new Vector3(0, -0.5f, 0));
+        collisionWorld.applyGravity();
     }
 
     @Override
@@ -70,8 +53,19 @@ public class BulletSystem extends EntitySystem implements EntityListener {
     @Override
     public void entityAdded(Entity entity) {
         BulletComponent bulletComponent = entity.getComponent(BulletComponent.class);
-        if (bulletComponent.body != null) {
+        if (bulletComponent != null) {
             collisionWorld.addRigidBody((btRigidBody) bulletComponent.body);
+            collisionWorld.addCollisionObject(bulletComponent.body,
+                    (short) btBroadphaseProxy.CollisionFilterGroups.StaticFilter,
+                    (short) (btBroadphaseProxy.CollisionFilterGroups.AllFilter));
+        }
+        CharacterComponent characterComponent = entity.getComponent(CharacterComponent.class);
+        if (characterComponent != null) {
+            collisionWorld.addCharacter(characterComponent.characterController);
+            collisionWorld.addCollisionObject(characterComponent.ghostObject,
+                    (short) btBroadphaseProxy.CollisionFilterGroups.CharacterFilter,
+                    (short) (btBroadphaseProxy.CollisionFilterGroups.AllFilter));
+            collisionWorld.addAction(characterComponent.characterController);
         }
     }
 
@@ -88,5 +82,6 @@ public class BulletSystem extends EntitySystem implements EntityListener {
 
     @Override
     public void entityRemoved(Entity entity) {
+        removeBody(entity);
     }
 }

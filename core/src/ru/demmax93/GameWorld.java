@@ -13,7 +13,6 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import ru.demmax93.components.CharacterComponent;
 import ru.demmax93.managers.EntityFactory;
@@ -24,25 +23,23 @@ import ru.demmax93.systems.StatusSystem;
 import ru.demmax93.ui.GameUI;
 
 public class GameWorld {
-    private static final float FOV = 67F;
     private ModelBatch modelBatch;
     private Environment environment;
     private PerspectiveCamera perspectiveCamera;
 
     private Engine engine;
     private Entity character;
-    public BulletSystem bulletSystem;
-    public ModelBuilder modelBuilder = new ModelBuilder();
+    private BulletSystem bulletSystem;
+    private final ModelBuilder modelBuilder = new ModelBuilder();
     private boolean isPlayerCreated = false;
-    private final Vector3 startPos = new Vector3(2f, 200f, -180f);
 
-    Model wallHorizontal = modelBuilder.createBox(40, 20, 1,
+    Model wallHorizontal = modelBuilder.createBox(400, 200, 1,
             new Material(ColorAttribute.createDiffuse(Color.WHITE), ColorAttribute.createSpecular(Color.RED), FloatAttribute
                     .createShininess(16f)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-    Model wallVertical = modelBuilder.createBox(1, 20, 40,
+    Model wallVertical = modelBuilder.createBox(1, 200, 400,
             new Material(ColorAttribute.createDiffuse(Color.GREEN), ColorAttribute.createSpecular(Color.WHITE), FloatAttribute
                     .createShininess(16f)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-    Model groundModel = modelBuilder.createBox(40, 1, 40,
+    Model groundModel = modelBuilder.createBox(400, 1, 400,
             new Material(ColorAttribute.createDiffuse(Color.YELLOW), ColorAttribute.createSpecular(Color.BLUE), FloatAttribute
                     .createShininess(16f)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 
@@ -52,7 +49,6 @@ public class GameWorld {
         initModelBatch();
         initPersCamera();
         addSystems(gameUI);
-        createGround();
         addEntities();
     }
 
@@ -62,9 +58,9 @@ public class GameWorld {
     }
 
     private void initPersCamera() {
-        perspectiveCamera = new PerspectiveCamera(FOV, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        perspectiveCamera.position.set(startPos);
-        perspectiveCamera.lookAt(0, 100f, 0);
+        perspectiveCamera = new PerspectiveCamera(Settings.FOV, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        perspectiveCamera.position.set(0, 0 ,0);
+        perspectiveCamera.lookAt(0, 0, 0);
         perspectiveCamera.near = 0.01f;
         perspectiveCamera.far = 1000f;
         perspectiveCamera.update();
@@ -81,7 +77,7 @@ public class GameWorld {
 
     private void createPlayer(float x, float y, float z) {
         if (!isPlayerCreated) {
-            character = EntityFactory.createPlayer(bulletSystem, x, y, z);
+            character = EntityFactory.createPlayer(x, y, z);
             if (character == null) return;
             engine.addEntity(character);
             isPlayerCreated = true;
@@ -90,10 +86,10 @@ public class GameWorld {
 
     private void createGround() {
         engine.addEntity(EntityFactory.createStaticEntity(groundModel, 0, 0, 0));
-        engine.addEntity(EntityFactory.createStaticEntity(wallHorizontal, 0, 10, -20));
-        engine.addEntity(EntityFactory.createStaticEntity(wallHorizontal, 0, 10, 20));
-        engine.addEntity(EntityFactory.createStaticEntity(wallVertical, 20, 10, 0));
-        engine.addEntity(EntityFactory.createStaticEntity(wallVertical, -20, 10, 0));
+        engine.addEntity(EntityFactory.createStaticEntity(wallHorizontal, 0, 100, -200));
+        engine.addEntity(EntityFactory.createStaticEntity(wallHorizontal, 0, 100, 200));
+        engine.addEntity(EntityFactory.createStaticEntity(wallVertical, 200, 100, 0));
+        engine.addEntity(EntityFactory.createStaticEntity(wallVertical, -200, 100, 0));
     }
 
     private void addSystems(GameUI gameUI) {

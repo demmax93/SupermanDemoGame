@@ -18,11 +18,13 @@ public class PlayerSystem extends EntitySystem implements EntityListener {
     private PlayerComponent playerComponent;
     private CharacterComponent characterComponent;
     private ModelComponent modelComponent;
-    public AnimationController animationController;
+    private AnimationController animationController;
     private final GameUI gameUI;
-    private final Vector3 tmp = new Vector3();
     private final Camera camera;
     private final GameWorld gameWorld;
+    private final Vector3 currentPosition = new Vector3();
+    private float cameraPitch = Settings.CAMERA_START_PITCH;
+    private float angleAroundPlayer = 0f;
 
     public PlayerSystem(GameWorld gameWorld, GameUI gameUI, Camera camera) {
         this.camera = camera;
@@ -40,6 +42,7 @@ public class PlayerSystem extends EntitySystem implements EntityListener {
         if (player == null) return;
         if (animationController == null) animationController = new AnimationController(modelComponent.instance);
         updateMovement(delta);
+        updateCameraMovement();
         updateStatus();
         checkGameOver();
     }
@@ -60,18 +63,43 @@ public class PlayerSystem extends EntitySystem implements EntityListener {
 
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             animationController.animate("Root|Walk_loop",0.5f);
-            modelComponent.instance.transform.rotate(0, modelComponent.instance.transform.getScaleY(), 0, 1);
+            modelComponent.instance.transform.rotate(Vector3.Y, 1);
+            angleAroundPlayer += 1f;
             animationController.paused = false;
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             animationController.animate("Root|Walk_loop",0.5f);
-            modelComponent.instance.transform.rotate(0, modelComponent.instance.transform.getScaleY(), 0, -1);
+            modelComponent.instance.transform.rotate(Vector3.Y, -1);
+            angleAroundPlayer -= 1f;
             animationController.paused = false;
         }
-
-        camera.update();
+        modelComponent.instance.transform.getTranslation(currentPosition);
         animationController.update(delta);
+    }
+
+    private void updateCameraMovement() {
+        float horDistance = (float) (Settings.CAMERA_DISTANCE_FROM_PLAYER * Math.cos(Math.toRadians(cameraPitch)));
+        float verDistance = (float) (Settings.CAMERA_DISTANCE_FROM_PLAYER * 2 * Math.sin(Math.toRadians(cameraPitch)));
+        calculateCameraPitch();
+        camera.position.set(
+                currentPosition.x - (float)(horDistance * Math.sin(Math.toRadians(angleAroundPlayer))),
+                currentPosition.y + verDistance,
+                currentPosition.z - (float)(horDistance * Math.cos(Math.toRadians(angleAroundPlayer))));
+        camera.lookAt(currentPosition.x, currentPosition.y + 100f, currentPosition.z);
+        camera.up.set(Vector3.Y);
+        camera.update();
+    }
+
+    private void calculateCameraPitch() {
+        float pitchChange = -Gdx.input.getDeltaY() * Settings.CAMERA_PITCH_FACTOR;
+        cameraPitch += pitchChange;
+
+        if (cameraPitch < Settings.CAMERA_MIN_PITCH) {
+            cameraPitch = Settings.CAMERA_MIN_PITCH;
+        } else if (cameraPitch > Settings.CAMERA_MAX_PITCH) {
+            cameraPitch = Settings.CAMERA_MAX_PITCH;
+        }
     }
 
     private void updateStatus() {

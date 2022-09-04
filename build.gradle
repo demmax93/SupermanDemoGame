@@ -20,12 +20,14 @@ allprojects {
     version = '1.0'
     ext {
         appName = "superman-demo-game"
-        gdxVersion = '1.10.0'
+        gdxVersion = '1.11.0'
         roboVMVersion = '2.3.12'
         box2DLightsVersion = '1.5'
-        ashleyVersion = '1.7.3'
+        ashleyVersion = '1.7.4'
         aiVersion = '1.8.2'
         gdxControllersVersion = '2.1.0'
+        libgdxpluginVersion = '1.23.1'
+        gltfVersion = 'master-SNAPSHOT'
     }
 
     repositories {
@@ -35,6 +37,7 @@ allprojects {
         gradlePluginPortal()
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+        maven { url 'https://jitpack.io' }
     }
 }
 
@@ -65,6 +68,7 @@ project(":core") {
         api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
         api "com.badlogicgames.gdx:gdx-ai:$aiVersion"
         api "com.badlogicgames.ashley:ashley:$ashleyVersion"
-        
+        implementation "com.github.blueboxware:libgdxplugin:$libgdxpluginVersion"
+        api "com.github.mgsx-dev.gdx-gltf:gltf:$gltfVersion"
     }
 }
