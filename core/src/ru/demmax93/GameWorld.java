@@ -3,10 +3,7 @@ package ru.demmax93;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.graphics.VertexAttributes;
-import com.badlogic.gdx.graphics.g3d.Environment;
+import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -14,6 +11,12 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.physics.bullet.Bullet;
+import net.mgsx.gltf.scene3d.attributes.PBRCubemapAttribute;
+import net.mgsx.gltf.scene3d.attributes.PBRTextureAttribute;
+import net.mgsx.gltf.scene3d.lights.DirectionalLightEx;
+import net.mgsx.gltf.scene3d.scene.SceneManager;
+import net.mgsx.gltf.scene3d.scene.SceneSkybox;
+import net.mgsx.gltf.scene3d.utils.IBLBuilder;
 import ru.demmax93.components.CharacterComponent;
 import ru.demmax93.managers.EntityFactory;
 import ru.demmax93.systems.BulletSystem;
@@ -24,8 +27,12 @@ import ru.demmax93.ui.GameUI;
 
 public class GameWorld {
     private ModelBatch modelBatch;
-    private Environment environment;
     private PerspectiveCamera perspectiveCamera;
+    private SceneManager sceneManager;
+    private Cubemap diffuseCubemap;
+    private Cubemap environmentCubemap;
+    private Cubemap specularCubemap;
+    private SceneSkybox skybox;
 
     private Engine engine;
     private Entity character;
@@ -45,16 +52,41 @@ public class GameWorld {
 
     public GameWorld(GameUI gameUI) {
         Bullet.init();
-        initEnvironment();
         initModelBatch();
         initPersCamera();
+        initEnvironment();
         addSystems(gameUI);
         addEntities();
     }
 
     private void initEnvironment() {
-        environment = new Environment();
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.3f, 0.3f, 0.3f, 1.f));
+        sceneManager = new SceneManager();
+        sceneManager.setBatch(modelBatch);
+        sceneManager.setCamera(perspectiveCamera);
+
+        // setup light
+        DirectionalLightEx light = new DirectionalLightEx();
+        light.direction.set(100, -100, 100).nor();
+        light.color.set(Color.YELLOW);
+        sceneManager.environment.add(light);
+
+        // setup quick IBL (image based lighting)
+        IBLBuilder iblBuilder = IBLBuilder.createOutdoor(light);
+        environmentCubemap = iblBuilder.buildEnvMap(2048);
+        diffuseCubemap = iblBuilder.buildIrradianceMap(512);
+        specularCubemap = iblBuilder.buildRadianceMap(10);
+        iblBuilder.dispose();
+
+        // This texture is provided by the library, no need to have it in your assets.
+        Texture brdfLUT = new Texture(Gdx.files.classpath("net/mgsx/gltf/shaders/brdfLUT.png"));
+
+        sceneManager.setAmbientLight(1f);
+        sceneManager.environment.set(new PBRTextureAttribute(PBRTextureAttribute.BRDFLUTTexture, brdfLUT));
+        sceneManager.environment.set(PBRCubemapAttribute.createSpecularEnv(specularCubemap));
+        sceneManager.environment.set(PBRCubemapAttribute.createDiffuseEnv(diffuseCubemap));
+
+        skybox = new SceneSkybox(environmentCubemap);
+        sceneManager.setSkyBox(skybox);
     }
 
     private void initPersCamera() {
@@ -94,7 +126,7 @@ public class GameWorld {
 
     private void addSystems(GameUI gameUI) {
         engine = new Engine();
-        engine.addSystem(new RenderSystem(modelBatch, environment, perspectiveCamera));
+        engine.addSystem(new RenderSystem(sceneManager));
         engine.addSystem(bulletSystem = new BulletSystem());
         engine.addSystem(new PlayerSystem(this, gameUI, perspectiveCamera));
         engine.addSystem(new StatusSystem(this));
@@ -125,8 +157,7 @@ public class GameWorld {
     }
 
     public void resize(int width, int height) {
-        perspectiveCamera.viewportHeight = height;
-        perspectiveCamera.viewportWidth = width;
+        sceneManager.updateViewport(width, height);
     }
 
     public void dispose() {
@@ -145,6 +176,11 @@ public class GameWorld {
         character.getComponent(CharacterComponent.class).characterController.dispose();
         character.getComponent(CharacterComponent.class).ghostObject.dispose();
         character.getComponent(CharacterComponent.class).ghostShape.dispose();
+        sceneManager.dispose();
+        environmentCubemap.dispose();
+        diffuseCubemap.dispose();
+        specularCubemap.dispose();
+        skybox.dispose();
     }
 
     public void remove(Entity entity) {

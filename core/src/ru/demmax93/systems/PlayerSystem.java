@@ -123,5 +123,9 @@ public class PlayerSystem extends EntitySystem implements EntityListener {
 
     @Override
     public void entityRemoved(Entity entity) {
+        player = null;
+        playerComponent = null;
+        characterComponent = null;
+        modelComponent = null;
     }
 }
