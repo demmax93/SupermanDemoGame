@@ -94,7 +94,7 @@ public class GameWorld {
 
     private void addSystems(GameUI gameUI) {
         engine = new Engine();
-        engine.addSystem(new RenderSystem(modelBatch, environment));
+        engine.addSystem(new RenderSystem(modelBatch, environment, perspectiveCamera));
         engine.addSystem(bulletSystem = new BulletSystem());
         engine.addSystem(new PlayerSystem(this, gameUI, perspectiveCamera));
         engine.addSystem(new StatusSystem(this));
@@ -121,9 +121,7 @@ public class GameWorld {
     }
 
     protected void renderWorld(float delta) {
-        modelBatch.begin(perspectiveCamera);
         engine.update(delta);
-        modelBatch.end();
     }
 
     public void resize(int width, int height) {
