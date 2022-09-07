@@ -48,34 +48,49 @@ public class PlayerSystem extends EntitySystem implements EntityListener {
     }
 
     private void updateMovement(float delta) {
-        animationController.paused = true;
+        boolean isMoveKeyPressed = false;
+        boolean isPlayerRunning = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
+        float defaultTransitionTime = 0.5f;
         if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
-            animationController.animate("Root|Walk_loop",0.5f);
-            modelComponent.instance.transform.translate(0, 0, 2);
-            animationController.paused = false;
+            animationController.animate(getMovingAnimation(isPlayerRunning), defaultTransitionTime);
+            modelComponent.instance.transform.translate(0, 0, getMovingSpeed(isPlayerRunning));
+            isMoveKeyPressed = true;
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            animationController.animate("Root|Walk_loop",0.5f);
-            modelComponent.instance.transform.translate(0, 0, -2);
-            animationController.paused = false;
+            animationController.animate(getMovingAnimation(isPlayerRunning), defaultTransitionTime);
+            modelComponent.instance.transform.translate(0, 0, -getMovingSpeed(isPlayerRunning));
+            isMoveKeyPressed = true;
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            animationController.animate("Root|Walk_loop",0.5f);
-            modelComponent.instance.transform.rotate(Vector3.Y, 1);
-            angleAroundPlayer += 1f;
-            animationController.paused = false;
+            animationController.animate(getMovingAnimation(isPlayerRunning), defaultTransitionTime);
+            modelComponent.instance.transform.rotate(Vector3.Y, getMovingSpeed(isPlayerRunning));
+            angleAroundPlayer += getMovingSpeed(isPlayerRunning);
+            isMoveKeyPressed = true;
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            animationController.animate("Root|Walk_loop",0.5f);
-            modelComponent.instance.transform.rotate(Vector3.Y, -1);
-            angleAroundPlayer -= 1f;
-            animationController.paused = false;
+            animationController.animate(getMovingAnimation(isPlayerRunning), defaultTransitionTime);
+            modelComponent.instance.transform.rotate(Vector3.Y, -getMovingSpeed(isPlayerRunning));
+            angleAroundPlayer -= getMovingSpeed(isPlayerRunning);
+            isMoveKeyPressed = true;
         }
+
+        if (!isMoveKeyPressed) {
+            animationController.animate("Root|Idle", defaultTransitionTime);
+        }
+
         modelComponent.instance.transform.getTranslation(currentPosition);
         animationController.update(delta);
+    }
+    
+    private String getMovingAnimation(boolean isPlayerRunning) {
+        return isPlayerRunning ? "Root|Run_loop" : "Root|Walk_loop";
+    }
+
+    private float getMovingSpeed(boolean isPlayerRunning) {
+        return isPlayerRunning ? 4f : 1f;
     }
 
     private void updateCameraMovement() {
